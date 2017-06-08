@@ -1,7 +1,11 @@
 package docker
 
 import (
+	"./auth"
+	"./rcli"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"runtime"
@@ -45,6 +49,49 @@ func (srv *Server) Help() string {
 		help += fmt.Sprintf("    %-10.10s%s\n", cmd[0], cmd[1])
 	}
 	return help
+}
+
+func (srv *Server) CmdLogin(stdin io.ReadCloser, stdout io.Writer, args ...string) error {
+	cmd := rcli.Subcmd(stdout, "login", "", "Register or login to the docker register server")
+	if err := cmd.Parse(args); err != nil {
+		return nil
+	}
+	var username string
+	var password string
+	var email string
+
+	fmt.Fprint(stdout, "Username (", srv.runtime.authConfig.Username, "): ")
+	fmt.Fscanf(stdin, "%s", &username)
+	if username == "" {
+		username = srv.runtime.authConfig.Username
+	}
+	if username != srv.runtime.authConfig.Username {
+		fmt.Fprint(stdout, "Password: ")
+		fmt.Fscanf(stdin, "%s", &password)
+
+		if password == "" {
+			return errors.New("Error : Password Required\n")
+		}
+
+		fmt.Fprint(stdout, "Email (", srv.runtime.authConfig.Email, "): ")
+		fmt.Fscanf(stdin, "%s", &email)
+		if email == "" {
+			email = srv.runtime.authConfig.Email
+		}
+
+	} else {
+		password = srv.runtime.authConfig.Password
+		email = srv.runtime.authConfig.Email
+	}
+	newAuthConfig := auth.NewAuthConfig(username, password, email, srv.runtime.root)
+	status, err := auth.Login(newAuthConfig)
+	if err != nil {
+		fmt.Fprintf(stdout, "Error :%s \n", err)
+	}
+	if status != "" {
+		fmt.Fprintf(stdout, status)
+	}
+	return nil
 }
 
 func NewServer() (*Server, error) {

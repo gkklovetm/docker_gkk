@@ -80,3 +80,13 @@ func getMethod(service Service, name string) Cmd {
 		return ret.(error)
 	}
 }
+
+func Subcmd(output io.Writer, name, signature, description string) *flag.FlagSet {
+	flags := flag.NewFlagSet(name, flag.ContinueOnError)
+	flags.SetOutput(output)
+	flags.Usage = func() {
+		fmt.Fprintf(output, "\nUsage: docker %s %s\n\n%s\n\n", name, signature, description)
+		flags.PrintDefaults()
+	}
+	return flags
+}
