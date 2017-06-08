@@ -1,48 +1,82 @@
 package rcli
 
 import (
-   "fmt"
-   "io"
-   "flag"
-   "strings"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"log"
+	"reflect"
+	"strings"
 )
 
-
 func p() {
-   fmt.Println("1")
+	fmt.Println("1")
 }
 
 type Service interface {
-   Name() string
-   Help() string
+	Name() string
+	Help() string
 }
 
+type Cmd func(io.ReadCloser, io.Writer, ...string) error
+
 func call(service Service, stdin io.ReadCloser, stdout io.Writer, args ...string) error {
-    return LocalCall(service, stdin, stdout, args...)
+	return LocalCall(service, stdin, stdout, args...)
 }
 
 func LocalCall(service Service, stdin io.ReadCloser, stdout io.Writer, args ...string) error {
-    if len(args) == 0 {
-        args = []string{"help"}
-    }
-    flags := flag.NewFlagSet("main", flag.ContinyeOnError)
-    flags.SetOutput(stdout)
-    flags.Uage = fun() {stdout.Write([]byte(service.help()))}
-    if err := flags.Parse(args); err != nil {
-        return err
-    }
-    cmd := flags.Arg(0)
-    log.Printf("%s\n", strings.Join(append(append([]string{service.Name()}, cmd), flags.Args()[1:]...), " "))
-    if cmd == "" {
-        c,d = "help"
-    }
-    method := getMethod(service, cmd)
-    if method != nil {
-        return method(stdin, stdout, flags.Args()[1:]...)
-    }
-    return errors.New("No such command: " + cmd)
+	if len(args) == 0 {
+		args = []string{"help"}
+	}
+	flags := flag.NewFlagSet("main", flag.ContinueOnError)
+	flags.SetOutput(stdout)
+	flags.Usage = func() { stdout.Write([]byte(service.Help())) }
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	cmd := flags.Arg(0)
+	log.Printf("%s\n", strings.Join(append(append([]string{service.Name()}, cmd), flags.Args()[1:]...), " "))
+	if cmd == "" {
+		cmd = "help"
+	}
+	method := getMethod(service, cmd)
+	if method != nil {
+		return method(stdin, stdout, flags.Args()[1:]...)
+	}
+	return errors.New("No such command: " + cmd)
 }
 
-
-
-
+func getMethod(service Service, name string) Cmd {
+	if name == "help" {
+		return func(stdin io.ReadCloser, stdout io.Writer, args ...string) error {
+			if len(args) == 0 {
+				stdout.Write([]byte(service.Help()))
+			} else {
+				if method := getMethod(service, args[0]); method == nil {
+					return errors.New("No such command:" + args[0])
+				} else {
+					method(stdin, stdout, "--help")
+				}
+			}
+			return nil
+		}
+	}
+	methodName := "Cmd" + strings.ToUpper(name[:1]) + strings.ToLower(name[1:])
+	method, exists := reflect.TypeOf(service).MethodByName(methodName)
+	if !exists {
+		return nil
+	}
+	return func(stdin io.ReadCloser, stdout io.Writer, args ...string) error {
+		ret := method.Func.CallSlice([]reflect.Value{
+			reflect.ValueOf(service),
+			reflect.ValueOf(stdin),
+			reflect.ValueOf(stdout),
+			reflect.ValueOf(args),
+		})[0].Interface()
+		if ret == nil {
+			return nil
+		}
+		return ret.(error)
+	}
+}
