@@ -13,6 +13,21 @@ import (
 var DEBUG_FLAG bool = false
 var CLIENT_SOCKET io.Writer = nil
 
+func Call(proto, addr string, args ...string) (*net.TCPConn, error) {
+	cmd, err := json.Marshal(args)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := net.Dial(proto, addr)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := fmt.Fprintln(conn, string(cmd)); err != nil {
+		return nil, err
+	}
+	return conn.(*net.TCPConn), nil
+}
+
 func ListenAndServe(proto, addr string, service Service) error {
 	listener, err := net.Listen(proto, addr)
 	if err != nil {

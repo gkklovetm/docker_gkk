@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const REGISTRY_SERVER = "https://registry.docker.io"
+const REGISTRY_SERVER = "https://registry.hub.docker.com"
 
 type AuthConfig struct {
 	Username string `json:"username"`
@@ -40,6 +40,8 @@ func Login(authConfig *AuthConfig) (string, error) {
 	}
 
 	b := strings.NewReader(string(jsonBody))
+	fmt.Printf("body: %s\n", b)
+	fmt.Printf("bodyjson: %s\n", string(jsonBody))
 	reql, err := http.Post(REGISTRY_SERVER+"/v1/users", "application/json; charset=utf-8", b)
 	if err != nil {
 		errMsg = fmt.Sprintf("Server Error: %s", err)

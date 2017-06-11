@@ -64,6 +64,7 @@ func getMethod(service Service, name string) Cmd {
 	}
 	methodName := "Cmd" + strings.ToUpper(name[:1]) + strings.ToLower(name[1:])
 	method, exists := reflect.TypeOf(service).MethodByName(methodName)
+	fmt.Println("%v,name:%s", method, methodName)
 	if !exists {
 		return nil
 	}

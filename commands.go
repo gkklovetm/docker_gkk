@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+const VERSION = "0.1.0"
+
 func (srv *Server) Name() string {
 	return "docker"
 }
@@ -52,6 +54,7 @@ func (srv *Server) Help() string {
 }
 
 func (srv *Server) CmdLogin(stdin io.ReadCloser, stdout io.Writer, args ...string) error {
+	fmt.Println("we are in cmd login")
 	cmd := rcli.Subcmd(stdout, "login", "", "Register or login to the docker register server")
 	if err := cmd.Parse(args); err != nil {
 		return nil
@@ -91,6 +94,11 @@ func (srv *Server) CmdLogin(stdin io.ReadCloser, stdout io.Writer, args ...strin
 	if status != "" {
 		fmt.Fprintf(stdout, status)
 	}
+	return nil
+}
+
+func (srv *Server) CmdVersion(stdio io.ReadCloser, stdout io.Writer, args ...string) error {
+	fmt.Fprintf(stdout, "Version:%s\n", VERSION)
 	return nil
 }
 
